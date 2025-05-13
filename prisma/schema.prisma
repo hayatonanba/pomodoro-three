@@ -1,0 +1,126 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model App {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  description String
+  url         String
+  thumbnail   String
+  createdAt   DateTime @default(now())
+  review      Review[]
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  fromUserId  String
+  toUserId    String
+  appId       String
+  fromUser    User     @relation("ReviewsGiven", fields: [fromUserId], references: [id])
+  toUser      User     @relation("ReviewsReceived", fields: [toUserId], references: [id])
+  app         App      @relation(fields: [appId], references: [id])
+  rating      Int
+  comment     String
+  createdAt   DateTime @default(now())
+}
+
+        
+model User {
+  id            String          @id @default(cuid())
+  name          String?
+  email         String          @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  // Optional for WebAuthn support
+  Authenticator Authenticator[]
+  apps          App[]
+  reviewsGiven   Review[]  @relation("ReviewsGiven")
+  reviewsReceived Review[] @relation("ReviewsReceived")
+  reDutyFrom ReviewDuty[] @relation("DutiesFrom")
+  reDutyTo ReviewDuty[] @relation("DutiesTo")
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ReviewDuty {
+  id           String   @id @default(cuid())
+  fromUserId   String   // レビューされた人（義務を持つ人）
+  toUserId     String   // レビューした人
+  dueDate      DateTime
+  isCompleted  Boolean  @default(false)
+  relatedAppId String   // 最初にレビューされたアプリ
+  createdAt    DateTime @default(now())
+
+  fromUser     User     @relation("DutiesFrom", fields: [fromUserId], references: [id])
+  toUser       User     @relation("DutiesTo", fields: [toUserId], references: [id])
+}
+
+ 
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+ 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  @@id([provider, providerAccountId])
+}
+ 
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+ 
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+ 
+  @@id([identifier, token])
+}
+ 
+// Optional for WebAuthn support
+model Authenticator {
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
+ 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ 
+  @@id([userId, credentialID])
+}
+
