@@ -41,6 +41,7 @@ model User {
   email         String          @unique
   emailVerified DateTime?
   image         String?
+  badMarks      Int      @default(0)
   accounts      Account[]
   sessions      Session[]
   // Optional for WebAuthn support
